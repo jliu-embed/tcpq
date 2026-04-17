@@ -1,0 +1,66 @@
+#include "packetcapture.h"
+#include <QDebug>
+#include <cstring>
+
+PacketCapture::PacketCapture(QObject *parent)
+    : QObject(parent)
+    , m_pcap(nullptr)
+{
+}
+
+PacketCapture::~PacketCapture() {
+    stop();
+}
+
+bool PacketCapture::start(const QString &interface, const QString &filter) {
+    char errbuf[PCAP_ERRBUF_SIZE];
+    
+    m_pcap = pcap_open_live(
+        interface.toLocal8Bit().constData(),
+        65535,              // snapshot length
+        1,                  // promiscuous mode
+        1000,               // read timeout (ms)
+        errbuf
+    );
+    
+    if (!m_pcap) {
+        emit error(QString("Failed to open %1: %2").arg(interface).arg(errbuf));
+        return false;
+    }
+    
+    // Compile and set filter
+    if (!filter.isEmpty()) {
+        struct bpf_program fp;
+        if (pcap_compile(m_pcap, &fp, filter.toLocal8Bit().constData(), 1, 0) == -1) {
+            emit error(QString("Failed to compile filter: %1").arg(pcap_geterr(m_pcap)));
+            return false;
+        }
+        if (pcap_setfilter(m_pcap, &fp) == -1) {
+            emit error(QString("Failed to set filter: %1").arg(pcap_geterr(m_pcap)));
+            return false;
+        }
+        pcap_freecode(&fp);
+    }
+    
+    m_interface = interface;
+    
+    // Start capture loop (would need threading in real impl)
+    // For now just verify it works
+    qDebug() << "Capture started on" << interface;
+    
+    return true;
+}
+
+void PacketCapture::stop() {
+    if (m_pcap) {
+        pcap_close(m_pcap);
+        m_pcap = nullptr;
+    }
+}
+
+void PacketCapture::packetHandler(u_char *user, const struct pcap_pkthdr *h, const u_char *bytes) {
+    Q_UNUSED(user);
+    // In real implementation, emit signal to Qt thread
+    Q_UNUSED(bytes);
+    qDebug() << "Packet captured:" << h->caplen << "bytes at" << h->ts.tv_sec;
+}

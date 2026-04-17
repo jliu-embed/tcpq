@@ -1,0 +1,43 @@
+# tcpq - TCP Packet Analyzer
+
+A Qt-based network packet analyzer inspired by tcpdump.
+
+## Features
+
+- Packet capture using libpcap
+- Real-time packet display
+- TCP/UDP/ICMP protocol analysis
+- Filter expression support
+- Qt GUI with packet list and detail views
+
+## Requirements
+
+- Qt5
+- libpcap-dev
+
+## Building
+
+```bash
+qmake -o Makefile tcpq.pro
+make
+```
+
+## Usage
+
+```bash
+./tcpq                    # Capture on default interface
+./tcpq -i eth0           # Capture on eth0
+./tcpq -f "tcp port 80"  # Apply filter
+```
+
+## Architecture
+
+- `src/main.cpp` - Application entry point
+- `src/packetcapture.cpp` - Packet capture engine
+- `src/packetanalyzer.cpp` - Protocol analysis
+- `ui/mainwindow.ui` - Main window UI
+- `include/` - Header files
+
+## License
+
+MIT

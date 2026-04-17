@@ -1,0 +1,57 @@
+#include <QCoreApplication>
+#include <QDebug>
+#include <QCommandLineParser>
+#include "packetcapture.h"
+#include "packetanalyzer.h"
+
+int main(int argc, char *argv[]) {
+    QCoreApplication app(argc, argv);
+    app.setApplicationName("tcpq");
+    app.setApplicationVersion("1.0.0");
+    
+    QCommandLineParser parser;
+    parser.setApplicationDescription("TCP Packet Analyzer - Qt based network analyzer");
+    parser.addHelpOption();
+    parser.addVersionOption();
+    
+    QCommandLineOption interfaceOption(
+        QStringList() << "i" << "interface",
+        "Network interface to capture",
+        "interface",
+        "eth0"
+    );
+    QCommandLineOption filterOption(
+        QStringList() << "f" << "filter",
+        "BPF filter expression",
+        "expression",
+        ""
+    );
+    
+    parser.addOption(interfaceOption);
+    parser.addOption(filterOption);
+    parser.process(app);
+    
+    QString interface = parser.value(interfaceOption);
+    QString filter = parser.value(filterOption);
+    
+    qDebug() << "tcpq - TCP Packet Analyzer";
+    qDebug() << "Interface:" << interface;
+    if (!filter.isEmpty()) {
+        qDebug() << "Filter:" << filter;
+    }
+    
+    PacketCapture capture;
+    PacketAnalyzer analyzer;
+    
+    QObject::connect(&capture, &PacketCapture::packetCaptured,
+                     &analyzer, &PacketAnalyzer::analyze);
+    
+    if (!capture.start(interface, filter)) {
+        qCritical() << "Failed to start capture on" << interface;
+        return 1;
+    }
+    
+    qDebug() << "Capturing packets... Press Ctrl+C to stop";
+    
+    return app.exec();
+}
